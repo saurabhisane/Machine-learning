@@ -1,0 +1,84 @@
+# Step 1: Import libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Step 2: Load dataset
+df = pd.read_csv("C:/Users/Saurabh/Downloads/archive (7)/adult.csv")
+
+# Step 3: Replace '?' with NaN
+df.replace('?', np.nan, inplace=True)
+
+# Step 4: Fill missing values (no chained assignment)
+for col in df.columns:
+    if df[col].dtype == 'object':
+        df[col] = df[col].fillna(df[col].mode()[0])
+    else:
+        df[col] = df[col].fillna(df[col].mean())
+
+# Step 5: Label encode categorical features
+label_encoders = {}
+for col in df.select_dtypes(include='object').columns:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+    label_encoders[col] = le
+
+# Step 6: Define features and target
+X = df.drop('income', axis=1)
+y = df['income']
+
+# Step 7: Scale numeric features
+scaler = StandardScaler()
+X[X.columns] = scaler.fit_transform(X)
+
+# Step 8: Train-test split (stratified)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+# # Step 9: Grid Search to optimize Decision Tree
+# param_grid = {
+#     'criterion': ['entropy', 'gini'],
+#     'max_depth': [4, 6, 8, 10, None],
+#     'min_samples_split': [2, 5, 10],
+#     'min_samples_leaf': [1, 2, 4]
+# }
+# grid = GridSearchCV(
+#     DecisionTreeClassifier(random_state=42),
+#     param_grid,
+#     cv=5,
+#     n_jobs=-1
+# )
+# grid.fit(X_train, y_train)
+# clf = grid.best_estimator_
+
+# Step 10: Predict and evaluate
+y_pred = clf.predict(X_test)
+print("✅ Best Parameters:", grid.best_params_)
+print("✅ Accuracy:", accuracy_score(y_test, y_pred))
+print("\n✅ Classification Report:\n", classification_report(y_test, y_pred))
+print("✅ Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+# Step 11: Visualize Decision Tree
+plt.figure(figsize=(20, 10))
+plot_tree(clf, feature_names=X.columns, class_names=label_encoders['income'].classes_, filled=True,max_depth=3)
+plt.title("Optimized Decision Tree on Adult Dataset")
+plt.show()
+
+importances = pd.Series(clf.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x=importances, y=importances.index)
+
+# Add labels and title
+plt.xlabel("Importance Score", fontsize=12)
+plt.ylabel("Features", fontsize=12)
+plt.title("Feature Importances", fontsize=14)
+plt.tight_layout()
+plt.show()
+
